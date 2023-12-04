@@ -17,6 +17,9 @@ case object UnitType extends Type {
 case class IntType(l: SecurityLabel) extends Type {
   override def toString: String = s"Int(${l.toString})"
 }
+case class BooleanType(l: SecurityLabel) extends Type {
+  override def toString: String = s"Boolean(${l.toString})"
+}
 case class RefType(ty: Type, l: SecurityLabel) extends Type {
   override def toString: String = s"${ty.toString} ref(${l.toString})"
 }

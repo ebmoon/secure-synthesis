@@ -10,6 +10,14 @@ object Lang {
     override val toString: String = id
     override val size = 1
   }
+  case object True extends Value {
+    override val toString: String = "true"
+    override val size = 1
+  }
+  case object False extends Value {
+    override val toString: String = "true"
+    override val size = 1
+  }
   case class Num(n: Int) extends Value {
     override val toString: String = n.toString
     override val size = 1
@@ -18,11 +26,11 @@ object Lang {
     override val toString: String = "()"
     override val size = 1
   }
-  case class Deref(e: Value) extends Expression {
+  case class Deref(e: Variable) extends Expression {
     override def toString: String = s"!${e.toString}"
     override val size = e.size + 1
   }
-  case class Assign(e1: Value, e2: Value) extends Expression {
+  case class Assign(e1: Variable, e2: Value) extends Expression {
     override def toString: String = s"${e1.toString} := ${e2.toString}"
     override val size = e1.size + e2.size + 1
   }

@@ -15,7 +15,7 @@ class Synth(constraint: Constraint) {
   type MutableMap = scala.collection.mutable.Map[Int, Lang.Expression]
 
   val variables = constraint.variables.map(Lang.Variable(_))
-  val values = Lang.Unit :: Lang.Num(0) :: Lang.Num(1) :: variables
+  val values = Lang.Unit :: Lang.True :: Lang.False :: Lang.Num(0) :: Lang.Num(1) :: variables
   val refExprs = values.map(Lang.Ref(_))
   val derefExprs = variables.map(Lang.Deref(_))
   val assignExprs =
@@ -33,7 +33,7 @@ class Synth(constraint: Constraint) {
 
   def iteExprs(expBins: Map[Int, List[Lang.Expression]])(n1: Int, n2:Int) =
     for {
-      variable <- variables
+      variable <- Lang.True :: Lang.False :: variables
       exp1 <- expBins.getOrElse(n1, List())
       exp2 <- expBins.getOrElse(n2, List())
     } yield Lang.Ite(variable, exp1, exp2)

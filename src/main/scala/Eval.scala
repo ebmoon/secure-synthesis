@@ -22,6 +22,8 @@ object Eval {
   def evaluate(cxt: Context, env: Environment)(e: Lang.Expression): (Environment, Value) = {
     e match {
       case Lang.Variable(id) => (env, cxt(id))
+      case Lang.True => (env, BooleanValue(true))
+      case Lang.False => (env, BooleanValue(false))
       case Lang.Num(n) => (env, NumValue(n))
       case Lang.Unit => (env, UnitValue)
       case Lang.Deref(sub) => {
