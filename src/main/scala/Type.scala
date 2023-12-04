@@ -22,7 +22,9 @@ case class RefType(ty: Type, l: SecurityLabel) extends Type {
 }
 
 object Typing {
-  def typeCheck(goalType: Type)(exp: Lang.Expression): Boolean = {
-    ???
+  type Context = Map[String, Type]
+
+  def typeCheck(cxt: Context, exp: Lang.Expression, ty: Type): Boolean = {
+    true  // Not implemented
   }
 }
