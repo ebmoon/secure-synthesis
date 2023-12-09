@@ -1,14 +1,23 @@
 sealed trait SecurityLabel {
   def toString: String
   def join(other: SecurityLabel): SecurityLabel
+  // Returns overapproximation
+  def <=(other: SecurityLabel): Boolean
 }
 case object Low extends SecurityLabel {
   override def toString: String = "L"
   override def join(other: SecurityLabel): SecurityLabel = other
+  override def <=(other: SecurityLabel): Boolean = true
 }
 case object High extends SecurityLabel {
   override def toString: String = "H"
   override def join(other: SecurityLabel): SecurityLabel = this
+  override def <=(other: SecurityLabel): Boolean = {
+    other match {
+      case Low => false
+      case _ => true
+    }
+  }
 }
 // Temporary security labels used for type inference
 case class SecurityVar(id: String) extends SecurityLabel {
@@ -20,6 +29,7 @@ case class SecurityVar(id: String) extends SecurityLabel {
       case _ => Join(this, other)
     }
   }
+  override def <=(other: SecurityLabel): Boolean = true
 }
 case class Join(l1: SecurityLabel, l2: SecurityLabel) extends SecurityLabel {
   override def toString: String = s"${l1.toString} |_| ${l2.toString}"
@@ -30,6 +40,7 @@ case class Join(l1: SecurityLabel, l2: SecurityLabel) extends SecurityLabel {
       case _ => Join(this, other)
     }
   }
+  override def <=(other: SecurityLabel): Boolean = (l1 <= other) && (l2 <= other)
 }
 
 object SecurityLabel {
@@ -57,10 +68,61 @@ case class RefType(ty: Type, l: SecurityLabel) extends Type {
   override def toString: String = s"${ty.toString} ref(${l.toString})"
 }
 
-object Typing {
+object StandardTyping {
   type Context = Map[String, Type]
 
+  // Return the type of expression if well-typed, return None if ill-typed
+  def inferType(cxt: Context, exp: Lang.Expression): Option[Type] = {
+    None
+  }
+
   def typeCheck(cxt: Context, exp: Lang.Expression, ty: Type): Boolean = {
+    true  // Not implemented
+  }
+}
+
+object BidirectionalTyping {
+  import BidirectionalLang._
+
+  type Context = Map[String, Type]
+
+  def guard(l: SecurityLabel, ty: Type): Boolean = {
+    ty match {
+      case UnitType => true
+      case IntType(l_ty) => l <= l_ty
+      case BooleanType(l_ty) => l <= l_ty
+      case RefType(_, l_ty) => l <= l_ty
+    }
+  }
+
+  def sub(ty1: Type, ty2: Type): Boolean = {
+    (ty1, ty2) match {
+      case (UnitType, UnitType) => true
+      case (IntType(l1), IntType(l2)) => l1 <= l2
+      case (BooleanType(l1), BooleanType(l2)) => l1 <= l2
+      case (RefType(tty1, l1), RefType(tty2, l2)) => sub(tty1, tty2) && sub(tty2, tty1) && l1 <= l2
+      case (_, _) => false
+    }
+  }
+
+  def join(ty1: Type, ty2: Type): Option[Type] = {
+    (ty1, ty2) match {
+      case (UnitType, UnitType) => Some(UnitType)
+      case (IntType(l1), IntType(l2)) => Some(IntType(l1.join(l2)))
+      case (BooleanType(l1), BooleanType(l2)) => Some(BooleanType(l1.join(l2)))
+      case (RefType(tty1, l1), RefType(tty2, l2)) =>
+        if (sub(tty1, tty2) && sub(tty2, tty1)) Some(RefType(tty1, l1.join(l2)))
+        else None
+      case (_, _) => None
+    }
+  }
+
+  // Return the type of expression if well-typed, return None if ill-typed
+  def inferType(cxt: Context, exp: Expression): Option[Type] = {
+    None
+  }
+
+  def typeCheck(cxt: Context, exp: Expression, ty: Type): Boolean = {
     true  // Not implemented
   }
 }
