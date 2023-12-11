@@ -6,7 +6,7 @@ class SynthSpec extends AnyFunSpec {
 
   describe("Synth") {
     it("should synthesize correct swap function") {
-      val inputType = Map("x" -> RefType(IntType(High), Low), "y" -> RefType(IntType(High), Low))
+      val inputType = Map("x" -> RefType(IntType(High), High), "y" -> RefType(IntType(High), High))
       val goalType = UnitType
       val example1 = new Example(
         preCxt = Map("x" -> LocValue(100), "y" -> LocValue(101)),
@@ -28,7 +28,9 @@ class SynthSpec extends AnyFunSpec {
       )
 
       val exp = new BidirectionalSynth(constraint).incrementalSearch
-      println(exp.toString)
+      assert(exp != None)
+
+      // println(exp.getOrElse(BidirectionalLang.Unit).toString)
     }
   }
 

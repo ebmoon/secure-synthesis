@@ -38,7 +38,7 @@ class Synth(constraint: Constraint) {
 
   def iteExprs(expBins: Map[Int, List[Lang.Expression]])(n1: Int, n2:Int) =
     for {
-      variable <- Lang.True :: Lang.False :: variables
+      variable <- variables
       exp1 <- expBins.getOrElse(n1, List())
       exp2 <- expBins.getOrElse(n2, List())
     } yield Lang.Ite(variable, exp1, exp2)
@@ -72,7 +72,7 @@ class Synth(constraint: Constraint) {
   }
 }
 
-class BidirectionalSynth(constraint: Constraint) {
+class BidirectionalSynth(constraint: Constraint, bound: Int = -1) {
 
   import BidirectionalLang._
 
@@ -87,21 +87,28 @@ class BidirectionalSynth(constraint: Constraint) {
 
   def elimValues(variables: Context): List[(ElimValue, Type)] = {
     (Unit, UnitType) ::
-      (True, BooleanType(SecurityLabel.freshVar)) ::
-      (False, BooleanType(SecurityLabel.freshVar)) ::
       (Num(0), IntType(SecurityLabel.freshVar)) ::
       (Num(1), IntType(SecurityLabel.freshVar)) ::
       variables.toList
   }
 
   def introValues(variables: Context): List[(IntroValue, Type)] =
-    elimValues(variables).map { case (exp, ty) => (ElimValueToIntroValue(exp), ty) }
+    (True, BooleanType(SecurityLabel.freshVar)) ::
+      (False, BooleanType(SecurityLabel.freshVar)) ::
+      elimValues(variables).map { case (exp, ty) => (ElimValueToIntroValue(exp), ty) }
 
   def refExprs(variables: Context): List[(Ref, Type)] =
     introValues(variables).map{ case (exp, ty) => (Ref(exp), ty) }
 
-  def derefExprs(variables: Context): List[(Deref, Type)] =
-    elimValues(variables).map{ case (exp, ty) => (Deref(exp), ty) }
+  def derefExprs(variables: Context): List[(Deref, Type)] = {
+    for {
+      (exp, ty) <- elimValues(variables)
+      innerType <- ty match {
+        case RefType(inner, _) => Some(inner)
+        case _ => None
+      }
+    } yield (Deref(exp), innerType)
+  }
 
   def validAssign(ty1: Type, ty2: Type): Boolean =
     ty1 match {
@@ -137,24 +144,27 @@ class BidirectionalSynth(constraint: Constraint) {
       (exp2, ty2) <- newTerms(n2, variables + (variable -> ty1))
     } yield (Bind(variable, exp1, exp2), ty2)
 
-  def incrementalSearch: Expression = {
+  def incrementalSearch: Option[Expression] = {
     val variables = constraint.variables.map(x => (Variable(x), constraint.inputType(x))).toMap
     var n = 1
-    while (true) {
+
+    while (n != bound) {
       val candidates = newTerms(n, variables)
       val wellTypedTerms = candidates.filter{ case (exp, _) => constraint.matchType(exp) }
+
       wellTypedTerms.foreach { case (exp, _) =>
-        if (constraint.matchExample(exp)) return exp
+        if (constraint.matchExample(exp)) return Some(exp)
         else ()
       }
       n += 1
     }
-    throw new UnknownError  // Unreachable code
+    None
   }
 
   def newTerms(n: Int, variables: Context): List[(Expression, Type)] = {
     newIntroTerms(n, variables) ++
-      (1 until 4).flatMap{ i => bindExprs(variables)(i, n-i-1) }
+      (2 until 4).filter(i => n-i-2 >= 1).flatMap{ i => bindExprs(variables)(i, n-i-2) }
+    // Not 1 until 4 because we don't want bind expression like bind x = x in ...
   }
 
   def newElimTerms(n: Int, variables: Context): List[(ElimExpression, Type)] = {

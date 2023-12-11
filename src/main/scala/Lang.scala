@@ -63,14 +63,6 @@ object BidirectionalLang {
     override val toString: String = id
     override val size: Int = 1
   }
-  case object True extends ElimValue {
-    override val toString: String = "true"
-    override val size: Int = 1
-  }
-  case object False extends ElimValue {
-    override val toString: String = "false"
-    override val size: Int = 1
-  }
   case class Num(n: Int) extends ElimValue {
     override val toString: String = n.toString
     override val size: Int = 1
@@ -96,16 +88,21 @@ object BidirectionalLang {
   }
 
   sealed trait IntroValue extends IntroExpression
+  case object True extends IntroValue {
+    override val toString: String = "true"
+    override val size: Int = 1
+  }
+  case object False extends IntroValue {
+    override val toString: String = "false"
+    override val size: Int = 1
+  }
   case class ElimValueToIntroValue(e: ElimValue) extends IntroValue {
     override def toString: String = e.toString
     override val size: Int = e.size
   }
 
   case class Bind(x: Variable, e1: ElimExpression, e2: Expression) extends Expression {
-    override def toString: String =
-      s"""bind ${x.toString} = ${e1.toString} in
-         |${e2.toString}
-         |""".stripMargin
+    override def toString: String = s"bind ${x.toString} = ${e1.toString} in ${e2.toString}"
     override def size: Int = 2 + e1.size + e2.size
   }
 }
