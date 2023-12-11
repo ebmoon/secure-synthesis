@@ -54,7 +54,7 @@ class Synth(constraint: Constraint) {
       expBins = expBins + (n -> candidates)
       n += 1
     }
-    throw UnknownError  // Unreachable code
+    throw new UnknownError  // Unreachable code
   }
 
   def newTerms(n: Int, expBins: Map[Int, List[Lang.Expression]]): List[Lang.Expression] = {
@@ -149,7 +149,7 @@ class BidirectionalSynth(constraint: Constraint) {
       }
       n += 1
     }
-    throw UnknownError  // Unreachable code
+    throw new UnknownError  // Unreachable code
   }
 
   def newTerms(n: Int, variables: Context): List[(Expression, Type)] = {
