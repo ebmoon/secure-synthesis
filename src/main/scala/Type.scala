@@ -1,3 +1,4 @@
+
 sealed trait SecurityLabel {
   def toString: String
   def join(other: SecurityLabel): SecurityLabel
@@ -77,7 +78,47 @@ object StandardTyping {
   }
 
   def typeCheck(cxt: Context, exp: Lang.Expression, ty: Type): Boolean = {
-    true  // Not implemented
+    val lCheck: Option[SecurityLabel] = labelCheck(cxt, exp);
+    lCheck.isDefined
+  }
+
+  def labelCheck(cxt: Context, exp:Lang.Expression): Option[SecurityLabel] = {
+    exp match {
+      /* leaf terms */
+      case Lang.Variable(id) => cxt.get(id).security //todo need way of getting pc
+      case Lang.True => Option(Low)
+      case Lang.False => Option(Low)
+      case Lang.Num(_) => Option(Low)
+      case Lang.Unit => Option(Low)
+
+      /* recursive terms */
+      case Lang.Deref(e) => labelCheck(cxt, e)
+      case Lang.Ref(e) => labelCheck(cxt, e)
+      case Lang.Assign(e1, e2) => { //only place can fail type checks
+        val e1Check = labelCheck(cxt, e1);
+        val e2Check = labelCheck(cxt, e2);
+
+        if (!e1Check.isDefined || !e2Check.isDefined) None // type error in subtree
+        else if (e1Check.get == Low && e2Check.get == High) None // violates information flow
+        else e1Check // return pc of assigned var
+      }
+      case Lang.Bind(x, e1, e2) => {
+        //val condCheck = labelCheck(cxt, x); // unknown, and unneeded
+        val e1Check = labelCheck(cxt, e1);
+        val e2Check = labelCheck(cxt, e2);
+
+        if (!e1Check.isDefined || !e2Check.isDefined) None // type error in subtree
+        else Option(e1Check.get.join(e2Check.get))
+      }
+      case Lang.Ite(cond, e1, e2) => {
+        val condCheck = labelCheck(cxt, cond);
+        val e1Check = labelCheck(cxt, e1);
+        val e2Check = labelCheck(cxt, e2);
+
+        if (!condCheck.isDefined || !e1Check.isDefined || !e2Check.isDefined) None // type error in subtree
+        else Option(condCheck.get.join(e1Check.get).join(e2Check.get))
+      }
+    }
   }
 }
 
