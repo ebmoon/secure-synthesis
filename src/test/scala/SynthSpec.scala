@@ -32,6 +32,34 @@ class SynthSpec extends AnyFunSpec {
 
       // println(exp.getOrElse(BidirectionalLang.Unit).toString)
     }
+
+    it("should fail to implement swap for different security labels") {
+      val inputType = Map("x" -> RefType(IntType(Low), High), "y" -> RefType(IntType(High), High))
+      val goalType = UnitType
+      val example1 = new Example(
+        preCxt = Map("x" -> LocValue(100), "y" -> LocValue(101)),
+        preEnv = Map(100 -> NumValue(3), 101 -> NumValue(5)),
+        postEnv = Map(100 -> NumValue(5), 101 -> NumValue(3)),
+        resultValue = UnitValue
+      )
+      val example2 = new Example(
+        preCxt = Map("x" -> LocValue(100), "y" -> LocValue(101)),
+        preEnv = Map(100 -> NumValue(7), 101 -> NumValue(5)),
+        postEnv = Map(100 -> NumValue(5), 101 -> NumValue(7)),
+        resultValue = UnitValue
+      )
+
+      val constraint = new Constraint(
+        inputType = inputType,
+        goalType = goalType,
+        examples = List(example1, example2)
+      )
+
+      val exp = new BidirectionalSynth(constraint, bound=20).incrementalSearch
+      assert(exp == None)
+
+      // println(exp.getOrElse(BidirectionalLang.Unit).toString)
+    }
   }
 
 }
