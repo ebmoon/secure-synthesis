@@ -70,19 +70,69 @@ case class RefType(ty: Type, l: SecurityLabel) extends Type {
 }
 
 object StandardTyping {
+
+  import Lang._
+
   type Context = Map[String, Type]
 
   // Return the type of expression if well-typed, return None if ill-typed
-  def inferType(cxt: Context, exp: Lang.Expression): Option[Type] = {
-    None
+  def inferType(cxt: Context, exp: Expression): Option[Type] = {
+    exp match {
+      case Variable(id) => cxt.get(id)
+      case True => Some(BooleanType(Low))
+      case False => Some(BooleanType(Low))
+      case Num(_) => Some(IntType(Low))
+      case Unit => Some(UnitType)
+      case Deref(e) =>
+        inferType(cxt, e) match {
+          case Some(RefType(ty, _)) => Some(ty)
+          case None => None
+        }
+      case Assign(e1, e2) =>
+        (inferType(cxt, e1), inferType(cxt, e2)) match {
+          case (Some(RefType(ty1, _)), Some(ty2)) =>
+            if (sub(ty1, ty2) && sub(ty2, ty1)) Some(ty1)
+            else None
+          case _ => None
+        }
+      case Ref(e) =>
+        inferType(cxt, e) match {
+          case Some(ty) => Some(RefType(ty))
+          case None => None
+        }
+      case Ite(cond, e1, e2) =>
+        (inferType(cxt, cond), inferType(cxt, e1), inferType(cxt, e2)) match {
+          case (Some(BooleanType(_)), Some(ty1), Some(ty2)) =>
+            if (sub(ty1, ty2)) Some(ty2)
+            else if (sub(ty2, ty1)) Some(ty1)
+            else None
+          case _ => None
+        }
+      case Bind(x, e1, e2) =>
+        inferType(cxt, e1) match {
+          case Some(ty1) => inferType(cxt + (x.id -> ty1), e2)
+          case None => None
+        }
+    }
   }
 
-  def typeCheck(cxt: Context, exp: Lang.Expression, ty: Type): Boolean = {
-    val lCheck: Option[SecurityLabel] = labelCheck(cxt, exp);
-    lCheck.isDefined
+  def sub(ty1: Type, ty2: Type): Boolean = {
+    (ty1, ty2) match {
+      case (UnitType, UnitType) => true
+      case (IntType(_), IntType(_)) => true
+      case (BooleanType(_), BooleanType(_)) => true
+      case (RefType(tty1, _), RefType(tty2, _)) => sub(tty1, tty2) && sub(tty2, tty1)
+      case (_, _) => false
+    }
   }
 
-  private def labelCheck(cxt: Context, exp:Lang.Expression): Option[SecurityLabel] = {
+  def typeCheck(cxt: Context, exp: Expression, goalType: Type): Boolean =
+    inferType(cxt, exp) match {
+      case Some(ty) if sub(ty, goalType) => labelCheck(cxt, exp).isDefined
+      case None => false
+    }
+
+  private def labelCheck(cxt: Context, exp:Expression): Option[SecurityLabel] = {
     exp match {
       /* leaf terms */
       case Lang.Variable(id) => {

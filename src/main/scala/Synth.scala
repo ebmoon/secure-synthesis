@@ -18,56 +18,75 @@ class Constraint(val inputType: Map[String, Type], goalType: Type, examples: Lis
 }
 
 // Currently has an error that bind variables are never used
-class Synth(constraint: Constraint) {
-  val variables = constraint.variables.map(Lang.Variable(_))
-  val values = Lang.Unit :: Lang.True :: Lang.False :: Lang.Num(0) :: Lang.Num(1) :: variables
-  val refExprs = values.map(Lang.Ref(_))
-  val derefExprs = variables.map(Lang.Deref(_))
-  val assignExprs =
-    for {
-      variable <- variables
-      value <- values
-    } yield Lang.Assign(variable, value)
+class Synth(constraint: Constraint, bound: Int = -1) {
 
-  def bindExprs(expBins: Map[Int, List[Lang.Expression]])(n1: Int, n2: Int) =
-    for {
-      variable <- variables
-      exp1 <- expBins.getOrElse(n1, List())
-      exp2 <- expBins.getOrElse(n2, List())
-    } yield Lang.Bind(variable, exp1, exp2)
+  import Lang._
 
-  def iteExprs(expBins: Map[Int, List[Lang.Expression]])(n1: Int, n2:Int) =
-    for {
-      variable <- variables
-      exp1 <- expBins.getOrElse(n1, List())
-      exp2 <- expBins.getOrElse(n2, List())
-    } yield Lang.Ite(variable, exp1, exp2)
+  type Context = Map[Variable, Type]
 
-  def bottomUpSearch: Lang.Expression = {
-    var expBins = Map[Int, List[Lang.Expression]]()
-    var n = 1;
-    while (true) {
-      val candidates = newTerms(n, expBins)
-      candidates.foreach {
-        exp => if (constraint.matchType(exp) && constraint.matchExample(exp)) return exp
-      }
-      expBins = expBins + (n -> candidates)
-      n += 1
-    }
-    throw new UnknownError  // Unreachable code
+  var counter: Int = 0
+  def freshVar: Variable = {
+    val id = s"x${counter}"
+    counter = counter + 1
+    Variable(id)
   }
 
-  def newTerms(n: Int, expBins: Map[Int, List[Lang.Expression]]): List[Lang.Expression] = {
-    if (n == 1) values
-    else if (n == 2) refExprs ++ derefExprs
-    else if (n == 3) {
-      assignExprs ++
-        (1 until n-2).flatMap(i => bindExprs(expBins)(i, n - i - 1)) ++
-        (1 until n-2).flatMap(i => iteExprs(expBins)(i, n - i - 1))
+  def values(variables: Context): List[Value] = {
+    Unit :: Num(0) :: Num(1) :: True :: False :: variables.keys.toList
+  }
+
+  def refExprs(variables: Context): List[Ref] =
+    values(variables).map{ Ref(_) }
+
+  def derefExprs(variables: Context): List[Deref] = {
+    values(variables).map{ Deref(_) }
+  }
+
+  def assignExprs(variables: Context): List[Assign] = {
+    for {
+      (variable, _) <- variables.toList
+      value <- values(variables)
+    } yield Assign(variable, value)
+  }
+
+  def iteExprs(variables: Context)(n1: Int, n2:Int): List[Ite] =
+    for {
+      variable <- values(variables)
+      exp1 <- newTerms(n1, variables)
+      exp2 <- newTerms(n2, variables)
+    } yield Ite(variable, exp1, exp2)
+
+  def bindExprs(variables: Context)(n1: Int, n2: Int): List[Bind] =
+    for {
+      exp1 <- newTerms(n1, variables)
+      variable = freshVar
+      exp2  <- newTerms(n2, variables + (variable -> UnitType))
+      // Type of variable is never used, assign any type
+    } yield Bind(variable, exp1, exp2)
+
+  def incrementalSearch: Option[Expression] = {
+    val variables = constraint.variables.map(x => (Variable(x), constraint.inputType(x))).toMap
+    var n = 1
+
+    while (n != bound) {
+      val candidates = newTerms(n, variables)
+      val wellTypedTerms = candidates.filter(constraint.matchType)
+
+      wellTypedTerms.foreach { case exp =>
+        if (constraint.matchExample(exp)) return Some(exp) else ()
+      }
+      n += 1
     }
+    None
+  }
+
+  def newTerms(n: Int, variables: Context): List[Expression] = {
+    if (n == 1) values(variables)
+    else if (n == 2) refExprs(variables) ++ derefExprs(variables)
+    else if (n == 3) assignExprs(variables) ++ iteExprs(variables)(1, 1)
     else {
-      (1 until n-2).flatMap(i => bindExprs(expBins)(i, n - i - 1)).toList ++
-        (1 until n-2).flatMap(i => iteExprs(expBins)(i, n - i - 1))
+      (1 until n-2).flatMap(i => bindExprs(variables)(i, n - i - 2)).toList ++
+        (1 until n-1).flatMap(i => iteExprs(variables)(i, n - i - 1))
     }
   }
 }

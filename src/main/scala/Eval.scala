@@ -12,7 +12,7 @@ object Eval {
   type Context = Map[String, Value]
   type Environment = Map[Location, Value]
 
-  var counter: Location = 0
+  var counter: Location = 10000
   def freshLocation: Location = {
     val ret = counter
     counter = counter + 1
