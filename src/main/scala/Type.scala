@@ -85,7 +85,15 @@ object StandardTyping {
   def labelCheck(cxt: Context, exp:Lang.Expression): Option[SecurityLabel] = {
     exp match {
       /* leaf terms */
-      case Lang.Variable(id) => cxt.get(id).security //todo need way of getting pc
+      case Lang.Variable(id) => {
+        cxt.get(id) match {
+          case Some(IntType(l)) => Option(l)
+          case Some(BooleanType(l)) => Option(l)
+          case Some(RefType(_, l)) => Option(l)
+          case None => throw new UnknownError
+          case _ => throw new IllegalArgumentException
+        };
+      }
       case Lang.True => Option(Low)
       case Lang.False => Option(Low)
       case Lang.Num(_) => Option(Low)
@@ -98,7 +106,7 @@ object StandardTyping {
         val e1Check = labelCheck(cxt, e1);
         val e2Check = labelCheck(cxt, e2);
 
-        if (!e1Check.isDefined || !e2Check.isDefined) None // type error in subtree
+        if (e1Check.isEmpty || e2Check.isEmpty) None // type error in subtree
         else if (e1Check.get == Low && e2Check.get == High) None // violates information flow
         else e1Check // return pc of assigned var
       }
@@ -107,7 +115,7 @@ object StandardTyping {
         val e1Check = labelCheck(cxt, e1);
         val e2Check = labelCheck(cxt, e2);
 
-        if (!e1Check.isDefined || !e2Check.isDefined) None // type error in subtree
+        if (e1Check.isEmpty || e2Check.isEmpty) None // type error in subtree
         else Option(e1Check.get.join(e2Check.get))
       }
       case Lang.Ite(cond, e1, e2) => {
@@ -115,7 +123,7 @@ object StandardTyping {
         val e1Check = labelCheck(cxt, e1);
         val e2Check = labelCheck(cxt, e2);
 
-        if (!condCheck.isDefined || !e1Check.isDefined || !e2Check.isDefined) None // type error in subtree
+        if (condCheck.isEmpty || e1Check.isEmpty || e2Check.isEmpty) None // type error in subtree
         else Option(condCheck.get.join(e1Check.get).join(e2Check.get))
       }
     }
