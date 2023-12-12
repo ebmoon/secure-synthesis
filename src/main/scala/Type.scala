@@ -82,7 +82,7 @@ object StandardTyping {
     lCheck.isDefined
   }
 
-  def labelCheck(cxt: Context, exp:Lang.Expression): Option[SecurityLabel] = {
+  private def labelCheck(cxt: Context, exp:Lang.Expression): Option[SecurityLabel] = {
     exp match {
       /* leaf terms */
       case Lang.Variable(id) => {
@@ -106,8 +106,10 @@ object StandardTyping {
         val e1Check = labelCheck(cxt, e1);
         val e2Check = labelCheck(cxt, e2);
 
-        if (e1Check.isEmpty || e2Check.isEmpty) None // type error in subtree
-        else if (e1Check.get == Low && e2Check.get == High) None // violates information flow
+        if (e1Check.isEmpty || e2Check.isEmpty)
+          None // type error in subtree
+        else if (e1Check.get == Low && e2Check.get == High)
+          None // violates information flow
         else e1Check // return pc of assigned var
       }
       case Lang.Bind(x, e1, e2) => {
@@ -115,7 +117,8 @@ object StandardTyping {
         val e1Check = labelCheck(cxt, e1);
         val e2Check = labelCheck(cxt, e2);
 
-        if (e1Check.isEmpty || e2Check.isEmpty) None // type error in subtree
+        if (e1Check.isEmpty || e2Check.isEmpty)
+          None // type error in subtree
         else Option(e1Check.get.join(e2Check.get))
       }
       case Lang.Ite(cond, e1, e2) => {
@@ -123,8 +126,11 @@ object StandardTyping {
         val e1Check = labelCheck(cxt, e1);
         val e2Check = labelCheck(cxt, e2);
 
-        if (condCheck.isEmpty || e1Check.isEmpty || e2Check.isEmpty) None // type error in subtree
-        else Option(condCheck.get.join(e1Check.get).join(e2Check.get))
+        if (condCheck.isEmpty || e1Check.isEmpty || e2Check.isEmpty)
+          None // type error in subtree
+        else if (condCheck.get == High && (e1Check.get == Low || e2Check.get == Low))
+          None // violates implicit IFC
+        else condCheck // return label of conditional guard
       }
     }
   }
