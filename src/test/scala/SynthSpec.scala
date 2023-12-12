@@ -122,14 +122,14 @@ class SynthSpec extends AnyFunSpec {
       val goalType = UnitType
       val example1 = new Example(
         preCxt = Map("x" -> LocValue(100), "y" -> LocValue(101)),
-        preEnv = Map(100 -> BooleanValue(True), 101 -> NumValue(0)),
-        postEnv = Map(100 -> BooleanValue(True), 101 -> NumValue(5)),
+        preEnv = Map(100 -> BooleanValue(true), 101 -> NumValue(0)),
+        postEnv = Map(100 -> BooleanValue(true), 101 -> NumValue(5)),
         resultValue = UnitValue
       )
       val example2 = new Example(
         preCxt = Map("x" -> LocValue(100), "y" -> LocValue(101)),
-        preEnv = Map(100 -> BooleanValue(False), 101 -> NumValue(0)),
-        postEnv = Map(100 -> BooleanValue(False), 101 -> NumValue(3)),
+        preEnv = Map(100 -> BooleanValue(false), 101 -> NumValue(0)),
+        postEnv = Map(100 -> BooleanValue(false), 101 -> NumValue(3)),
         resultValue = UnitValue
       )
 
@@ -150,14 +150,14 @@ class SynthSpec extends AnyFunSpec {
       val goalType = UnitType
       val example1 = new Example(
         preCxt = Map("x" -> LocValue(100), "y" -> LocValue(101)),
-        preEnv = Map(100 -> BooleanValue(True), 101 -> NumValue(0)),
-        postEnv = Map(100 -> BooleanValue(True), 101 -> NumValue(5)),
+        preEnv = Map(100 -> BooleanValue(true), 101 -> NumValue(0)),
+        postEnv = Map(100 -> BooleanValue(true), 101 -> NumValue(5)),
         resultValue = UnitValue
       )
       val example2 = new Example(
         preCxt = Map("x" -> LocValue(100), "y" -> LocValue(101)),
-        preEnv = Map(100 -> BooleanValue(False), 101 -> NumValue(0)),
-        postEnv = Map(100 -> BooleanValue(False), 101 -> NumValue(3)),
+        preEnv = Map(100 -> BooleanValue(false), 101 -> NumValue(0)),
+        postEnv = Map(100 -> BooleanValue(false), 101 -> NumValue(3)),
         resultValue = UnitValue
       )
 
